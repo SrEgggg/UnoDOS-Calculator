@@ -1,35 +1,83 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Needed for Status Bar color
 
 void main() {
+  // Ensure we set the system UI overlays for a full-screen look
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+    ),
+  );
   runApp(const GwaCalculatorApp());
 }
 
-class GwaCalculatorApp extends StatelessWidget {
-  const GwaCalculatorApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'UnoDos GWA Calculator',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        // Use colorScheme instead of primarySwatch for better Material 3 support
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
-        useMaterial3: true,
-        scaffoldBackgroundColor: const Color(0xFFF5F5F5),
-      ),
-      home: const CalculatorScreen(),
-    );
-  }
-}
-
-// Model class to represent a Subject
+// Model class to represent a Subject (No change, it's perfect)
 class Subject {
   String name;
   double units;
   double grade;
 
   Subject({required this.name, required this.units, required this.grade});
+}
+
+class GwaCalculatorApp extends StatelessWidget {
+  const GwaCalculatorApp({super.key});
+
+  // Define the new color palette
+  static const Color primaryColor = Color(
+    0xFF4527A0,
+  ); // Deep Purple (Indigo 800)
+  static const Color accentColor = Color(0xFF26C6DA); // Cyan/Teal
+  static const Color backgroundColor = Color(
+    0xFFF0F4F8,
+  ); // Very light grey blue
+
+  @override
+  Widget build(BuildContext context) {
+    // Define the desired text color once
+    const Color bodyTextColor = Color(0xFF333333);
+
+    return MaterialApp(
+      title: 'UnoDos GWA Calculator',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: primaryColor,
+          primary: primaryColor,
+          secondary: accentColor,
+        ),
+        useMaterial3: true,
+        // Set a cleaner overall background
+        scaffoldBackgroundColor: backgroundColor,
+        appBarTheme: const AppBarTheme(
+          color: primaryColor,
+          elevation: 0,
+          titleTextStyle: TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 24,
+            color: Colors.white,
+          ),
+          iconTheme: IconThemeData(color: Colors.white),
+        ),
+
+        // ----------------- THE CORRECTED TEXTTHEME BLOCK -----------------
+        // We use .copyWith() instead of the removed .apply() method to safely change the default text color.
+        textTheme: Theme.of(context).textTheme.copyWith(
+          // Apply the desired color to common body text styles
+          bodyLarge: Theme.of(
+            context,
+          ).textTheme.bodyLarge?.copyWith(color: bodyTextColor),
+          bodyMedium: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: bodyTextColor),
+          // You can continue to copyWith specific styles if needed.
+        ),
+        // -----------------------------------------------------------------
+      ),
+      home: const CalculatorScreen(),
+    );
+  }
 }
 
 class CalculatorScreen extends StatefulWidget {
@@ -69,30 +117,37 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     super.dispose();
   }
 
-  // LOGIC: Calculate GWA
+  // LOGIC: Calculate GWA (same as before)
   double get _calculateGWA {
     if (subjects.isEmpty) return 0.0;
-
-    double totalUnits = 0;
-    double totalGradePoints = 0;
-
-    for (var subject in subjects) {
-      totalUnits += subject.units;
-      totalGradePoints += (subject.grade * subject.units);
-    }
-
-    if (totalUnits == 0) return 0.0;
-    return totalGradePoints / totalUnits;
+    double totalUnits = subjects.fold<double>(0, (p, c) => p + c.units);
+    double totalGradePoints = subjects.fold<double>(
+      0,
+      (p, c) => p + (c.grade * c.units),
+    );
+    return totalUnits == 0 ? 0.0 : totalGradePoints / totalUnits;
   }
 
-  // LOGIC: Add a new subject
+  // LOGIC: Get status based on GWA
+  (String, Color) _getGWAStatus(double gwa) {
+    if (subjects.isEmpty) return ('Awaiting Input', Colors.white70);
+    if (gwa <= 1.25) return ('Summa Cum Laude Status', Colors.white);
+    if (gwa <= 1.50) return ('Magna Cum Laude Status', Colors.white);
+    if (gwa <= 1.75) return ('Dean\'s List Standing', Colors.white);
+    if (gwa <= 3.00) return ('Good Academic Standing', Colors.yellow.shade200);
+    return ('Needs Improvement', Colors.red.shade200);
+  }
+
+  // LOGIC: Add a new subject (same as before, minor UI adjustment)
   void _addSubject() {
-    final name = _nameController.text;
-    final units = double.tryParse(_unitsController.text);
+    final name = _nameController.text.trim();
+    final units = double.tryParse(_unitsController.text.trim());
 
     if (name.isEmpty || units == null || units <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid name and units!')),
+        const SnackBar(
+          content: Text('Please enter a valid subject name and units!'),
+        ),
       );
       return;
     }
@@ -101,30 +156,34 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       subjects.add(Subject(name: name, units: units, grade: _selectedGrade));
     });
 
-    // Clear inputs and close modal
     _nameController.clear();
     _unitsController.clear();
     Navigator.of(context).pop();
   }
 
-  // LOGIC: Remove a subject
+  // LOGIC: Remove a subject (same as before)
   void _removeSubject(int index) {
     setState(() {
       subjects.removeAt(index);
     });
   }
 
-  // UI: Show the "Add Subject" Dialog
+  // UI: Show the "Add Subject" Dialog (using a more stylized bottom sheet)
   void _showAddSubjectDialog() {
     // Reset defaults
     _selectedGrade = 1.00;
+    _nameController.clear();
+    _unitsController.clear();
 
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true, // Allow full screen height if needed
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25.0)),
+      ),
       builder: (ctx) => Padding(
         padding: EdgeInsets.only(
-          top: 20,
+          top: 30,
           left: 20,
           right: 20,
           bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
@@ -135,58 +194,97 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
           children: [
             const Text(
               'Add New Subject',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: GwaCalculatorApp.primaryColor,
+              ),
             ),
-            const SizedBox(height: 15),
+            const SizedBox(height: 25),
             TextField(
               controller: _nameController,
               decoration: const InputDecoration(
                 labelText: 'Subject Code (e.g., CPE 101)',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.book),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                ),
+                prefixIcon: Icon(
+                  Icons.book,
+                  color: GwaCalculatorApp.primaryColor,
+                ),
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 15),
             TextField(
               controller: _unitsController,
               keyboardType: TextInputType.number,
               decoration: const InputDecoration(
                 labelText: 'Units (e.g., 3.0)',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.numbers),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                ),
+                prefixIcon: Icon(
+                  Icons.numbers,
+                  color: GwaCalculatorApp.primaryColor,
+                ),
               ),
             ),
-            const SizedBox(height: 10),
-            DropdownButtonFormField<double>(
-              value: _selectedGrade,
-              decoration: const InputDecoration(
-                labelText: 'Grade',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.grade),
-              ),
-              items: _gradeOptions.map((grade) {
-                return DropdownMenuItem(
-                  value: grade,
-                  child: Text(grade.toStringAsFixed(2)),
+            const SizedBox(height: 15),
+            StatefulBuilder(
+              builder: (BuildContext context, StateSetter dropDownSetState) {
+                return DropdownButtonFormField<double>(
+                  value: _selectedGrade,
+                  decoration: const InputDecoration(
+                    labelText: 'Grade',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(12)),
+                    ),
+                    prefixIcon: Icon(
+                      Icons.grade,
+                      color: GwaCalculatorApp.primaryColor,
+                    ),
+                  ),
+                  items: _gradeOptions.map((grade) {
+                    return DropdownMenuItem(
+                      value: grade,
+                      child: Text(
+                        grade.toStringAsFixed(2),
+                        style: TextStyle(
+                          fontWeight: grade <= 3.0
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: grade <= 3.0
+                              ? GwaCalculatorApp.primaryColor
+                              : Colors.red,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      dropDownSetState(() {
+                        _selectedGrade = value;
+                      });
+                    }
+                  },
                 );
-              }).toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() {
-                    _selectedGrade = value;
-                  });
-                }
               },
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 30),
             ElevatedButton(
               onPressed: _addSubject,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.indigo,
+                backgroundColor: GwaCalculatorApp.accentColor,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 15),
+                padding: const EdgeInsets.symmetric(vertical: 18),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
-              child: const Text('ADD SUBJECT'),
+              child: const Text(
+                'ADD SUBJECT',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         ),
@@ -194,25 +292,31 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     );
   }
 
-  // UI: Build the GWA Header Card
+  // UI: Build the GWA Header Card (with Gradient and Status)
   Widget _buildGwaCard() {
     double gwa = _calculateGWA;
-    Color gwaColor = gwa <= 1.75
-        ? Colors.green
-        : (gwa <= 3.0 ? Colors.orange : Colors.red);
-    if (subjects.isEmpty) gwaColor = Colors.grey;
+    final (statusText, statusColor) = _getGWAStatus(gwa);
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(30),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        // Use a gradient for a premium look
+        gradient: const LinearGradient(
+          colors: [
+            GwaCalculatorApp.primaryColor,
+            Color(0xFF673AB7), // Lighter Purple
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(25),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
+            color: GwaCalculatorApp.primaryColor.withOpacity(0.4),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -221,27 +325,41 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
           const Text(
             'GENERAL WEIGHTED AVERAGE',
             style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.2,
-              color: Colors.grey,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 1.5,
+              color: Colors.white70,
             ),
           ),
           const SizedBox(height: 10),
           Text(
             gwa.toStringAsFixed(2),
-            style: TextStyle(
-              fontSize: 48,
+            style: const TextStyle(
+              fontSize: 64, // Larger font size
               fontWeight: FontWeight.w900,
-              color: gwaColor,
+              color:
+                  Colors.white, // White score for contrast on dark background
             ),
           ),
           const SizedBox(height: 5),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: statusColor.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              subjects.isEmpty ? 'Add subjects to calculate' : statusText,
+              style: TextStyle(
+                color: statusColor.withOpacity(1.0),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
           Text(
-            subjects.isEmpty
-                ? 'Add subjects to calculate'
-                : 'Total Units: ${subjects.fold<double>(0, (p, c) => p + c.units)}',
-            style: TextStyle(color: Colors.grey[600]),
+            'Total Units: ${subjects.fold<double>(0, (p, c) => p + c.units).toStringAsFixed(1)}',
+            style: const TextStyle(color: Colors.white60, fontSize: 14),
           ),
         ],
       ),
@@ -252,66 +370,56 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'UnoDos',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.indigo,
-        elevation: 0,
+        title: const Text('UnoDos GWA Tracker'),
+        toolbarHeight: 80, // Make the App Bar a bit taller
       ),
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top Section: GWA Display
-          Stack(
-            children: [
-              Container(
-                height: 50,
-                decoration: const BoxDecoration(
-                  color: Colors.indigo,
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(30),
-                    bottomRight: Radius.circular(30),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 0,
-                ),
-                child: _buildGwaCard(),
-              ),
-            ],
+          // GWA Display Card (positioned right below the AppBar)
+          Transform.translate(
+            offset: const Offset(
+              0,
+              -30,
+            ), // Move the card up to overlap the AppBar
+            child: _buildGwaCard(),
           ),
 
-          const SizedBox(height: 20),
-
-          // Middle Section: List Header
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'My Subjects',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                if (subjects.isNotEmpty)
-                  TextButton(
-                    onPressed: () {
-                      setState(() {
-                        subjects.clear();
-                      });
-                    },
-                    child: const Text(
-                      'Clear All',
-                      style: TextStyle(color: Colors.red),
-                    ),
-                  ),
-              ],
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 0, 20, 10),
+            child: Text(
+              'My Subjects',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF333333),
+              ),
             ),
           ),
+
+          // Clear All Button
+          if (subjects.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  icon: const Icon(Icons.delete_sweep, color: Colors.red),
+                  label: const Text(
+                    'Clear All',
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      subjects.clear();
+                    });
+                  },
+                ),
+              ),
+            ),
 
           // Bottom Section: List of Subjects
           Expanded(
@@ -321,82 +429,113 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(
-                          Icons.assignment_add,
-                          size: 60,
+                          Icons.calculate_outlined,
+                          size: 70,
                           color: Colors.grey[300],
                         ),
                         const SizedBox(height: 10),
                         Text(
-                          'No subjects added yet',
-                          style: TextStyle(color: Colors.grey[500]),
+                          'Tap + to add your first subject!',
+                          style: TextStyle(
+                            color: Colors.grey[500],
+                            fontSize: 16,
+                          ),
                         ),
                       ],
                     ),
                   )
                 : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 80),
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
                     itemCount: subjects.length,
                     itemBuilder: (context, index) {
                       final subject = subjects[index];
+                      // Determine the visual grade color
+                      final gradeColor = subject.grade <= 3.0
+                          ? GwaCalculatorApp.accentColor
+                          : Colors.red.shade400;
+
                       return Dismissible(
-                        key: UniqueKey(),
+                        key: ValueKey(subject.name + index.toString()),
                         direction: DismissDirection.endToStart,
                         onDismissed: (_) => _removeSubject(index),
                         background: Container(
                           alignment: Alignment.centerRight,
-                          padding: const EdgeInsets.only(right: 20),
-                          color: Colors.red,
-                          child: const Icon(Icons.delete, color: Colors.white),
-                        ),
-                        child: Card(
-                          margin: const EdgeInsets.symmetric(
-                            vertical: 6,
-                          ), // Added simplified margin here
-                          elevation: 2, // Added simplified elevation here
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                          padding: const EdgeInsets.only(right: 25),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade600,
+                            borderRadius: BorderRadius.circular(15),
                           ),
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: Colors.indigo.withOpacity(0.1),
-                              child: Text(
-                                subject.name.isNotEmpty
-                                    ? subject.name[0].toUpperCase()
-                                    : '?',
-                                style: const TextStyle(
-                                  color: Colors.indigo,
-                                  fontWeight: FontWeight.bold,
+                          margin: const EdgeInsets.symmetric(vertical: 8),
+                          child: const Icon(
+                            Icons.delete_forever,
+                            color: Colors.white,
+                            size: 30,
+                          ),
+                        ),
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(vertical: 8),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(15),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              // Grade Circle
+                              Container(
+                                width: 50,
+                                height: 50,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: gradeColor.withOpacity(0.15),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Text(
+                                  subject.grade.toStringAsFixed(2),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 16,
+                                    color: gradeColor,
+                                  ),
                                 ),
                               ),
-                            ),
-                            title: Text(
-                              subject.name,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            subtitle: Text('${subject.units} Units'),
-                            trailing: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: subject.grade <= 3.0
-                                    ? Colors.green.withOpacity(0.1)
-                                    : Colors.red.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                subject.grade.toStringAsFixed(2),
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: subject.grade <= 3.0
-                                      ? Colors.green
-                                      : Colors.red,
+                              const SizedBox(width: 15),
+                              // Subject Details
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      subject.name,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 16,
+                                        color: Color(0xFF333333),
+                                      ),
+                                    ),
+                                    Text(
+                                      '${subject.units} Units',
+                                      style: TextStyle(
+                                        color: Colors.grey[600],
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ),
+                              const Icon(
+                                Icons.arrow_back_ios,
+                                size: 16,
+                                color: Colors.grey,
+                              ), // Hint to swipe
+                            ],
                           ),
                         ),
                       );
@@ -407,9 +546,16 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showAddSubjectDialog,
-        backgroundColor: Colors.indigo,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('Add Subject', style: TextStyle(color: Colors.white)),
+        backgroundColor: GwaCalculatorApp.accentColor,
+        icon: const Icon(
+          Icons.add_circle_outline,
+          color: Colors.white,
+          size: 28,
+        ),
+        label: const Text(
+          'Add Subject',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
       ),
     );
   }
