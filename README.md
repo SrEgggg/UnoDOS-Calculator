@@ -50,6 +50,7 @@
 
 <p>
   You can download the latest version in the <a href="[https://github.com/](https://github.com/SrEgggg/UnoDOS-Calculator/releases/tag/v0.1.0)">GitHub Releases</a> section.
+  https://github.com/SrEgggg/UnoDOS-Calculator/releases
 </p>
 
 <h2>📌 Notes</h2>
