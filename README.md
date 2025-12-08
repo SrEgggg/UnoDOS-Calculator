@@ -58,9 +58,3 @@
   Currently, the app focuses on functionality over design. 
   A cleaner and improved design will be added in future updates.
 </p>
-
-<h2>📄 License</h2>
-
-<p>
-  This project is open-source. Feel free to contribute or fork the repository.
-</p>
