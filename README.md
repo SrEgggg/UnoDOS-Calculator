@@ -61,5 +61,5 @@
 </p>
 
 <p>
-  This app is this in production
+  This app is still in production
 </p>
