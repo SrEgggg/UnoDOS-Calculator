@@ -59,3 +59,7 @@
   Currently, the app focuses on functionality over design. 
   A cleaner and improved design will be added in future updates.
 </p>
+
+<p>
+  This app is this in production
+</p>
