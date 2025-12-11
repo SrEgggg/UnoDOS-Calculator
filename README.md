@@ -44,6 +44,8 @@
   <li>UI improvement (slide-out sidebar for semesters/years)</li>
   <li>More flexible subject management</li>
   <li>Better visualization of academic progress</li>
+  <li>Settings</li>
+  <li>Local SQL</li>
 </ul>
 
 <h2>📥 Download</h2>
