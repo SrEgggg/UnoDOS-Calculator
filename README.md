@@ -50,6 +50,7 @@
 
 <p>
   You can download the latest version in the <a href="[https://github.com/](https://github.com/SrEgggg/UnoDOS-Calculator/releases/tag/v0.1.0)">GitHub Releases</a> section.
+  https://github.com/SrEgggg/UnoDOS-Calculator/releases
 </p>
 
 <h2>📌 Notes</h2>
@@ -59,8 +60,6 @@
   A cleaner and improved design will be added in future updates.
 </p>
 
-<h2>📄 License</h2>
-
 <p>
-  This project is open-source. Feel free to contribute or fork the repository.
+  This app is still in production
 </p>
